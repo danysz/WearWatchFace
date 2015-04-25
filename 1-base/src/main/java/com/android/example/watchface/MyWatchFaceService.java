@@ -20,6 +20,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -97,6 +99,11 @@ public class MyWatchFaceService extends CanvasWatchFaceService {
         private float mCenterX;
         private float mCenterY;
 
+        // GY:
+        private Bitmap mBackgroundBitmap;
+        private static final float HAND_END_CAP_RADIUS = 4f;
+        private static final float SHADOW_RADIUS = 6f;
+
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
@@ -117,6 +124,11 @@ public class MyWatchFaceService extends CanvasWatchFaceService {
             mHandPaint.setStrokeCap(Paint.Cap.ROUND);
 
             mTime = new Time();
+
+            // GY:
+            mBackgroundBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.custom_background);
+            mHandPaint.setShadowLayer(SHADOW_RADIUS,0,0,Color.BLACK);
+            mHandPaint.setStyle(Paint.Style.STROKE);
         }
 
         @Override
@@ -146,6 +158,7 @@ public class MyWatchFaceService extends CanvasWatchFaceService {
             updateTimer();
         }
 
+        // GY: generally called once upon the watch face service/engine start
         @Override
         public void onSurfaceChanged(SurfaceHolder holder, int format, int width, int height) {
             super.onSurfaceChanged(holder, format, width, height);
@@ -161,10 +174,28 @@ public class MyWatchFaceService extends CanvasWatchFaceService {
             mCenterY = mHeight / 2f;
             /*
              * Calculate the lengths of the watch hands and store them in member variables.
-             */
-            mHourHandLength = mCenterX - 80;
-            mMinuteHandLength = mCenterX - 40;
-            mSecondHandLength = mCenterX - 20;
+             */// small adjustments here
+            mHourHandLength = (float)0.5 * width / 2; //width provided by func params
+            mMinuteHandLength = (float)0.7 * width / 2;
+            mSecondHandLength = (float)0.9 * width / 2;
+
+            //notes from pro tips:
+            /*
+            Pro-tip
+            Remember to put f after the decimal number of 0.5, 0.7 and 0.9 or Java will complain that these are
+            doubles rather than floats and refuse to compile.
+
+            Pro-tip
+            Why do we set the length to be a proportion of the screen rather than
+            half the width minus some fixed number? Proportion scales better for different size screens.
+            Android Wear already has a number of different devices and more will come. This will make it more
+            future proof.
+            */
+
+            float mScale = ((float) width) / (float) mBackgroundBitmap.getWidth();
+            mBackgroundBitmap = Bitmap.createScaledBitmap(mBackgroundBitmap,
+                    (int)(mBackgroundBitmap.getWidth() * mScale),
+                    (int)(mBackgroundBitmap.getHeight() * mScale), true);
         }
 
         @Override
@@ -172,7 +203,8 @@ public class MyWatchFaceService extends CanvasWatchFaceService {
             mTime.setToNow();
 
             // Draw the background.
-            canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), mBackgroundPaint);
+            //canvas.drawRect(0, 0, canvas.getWidth(), canvas.getHeight(), mBackgroundPaint);
+            canvas.drawBitmap(mBackgroundBitmap, 0, 0, mBackgroundPaint);
 
             /*
              * These calculations reflect the rotation in degrees per unit of
